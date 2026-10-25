@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>洛雪TV 影视导航</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card-hover: #22263a;
+    --text: #e8eaf0;
+    --sub: #8b93a7;
+    --accent: #22c1a3;
+    --border: #262b3a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+  header { text-align: center; padding: 40px 0 8px; }
+  header h1 {
+    font-size: 30px; font-weight: 700; letter-spacing: 2px;
+    background: linear-gradient(90deg, #22c1a3, #4fd1c5);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header p { color: var(--sub); font-size: 13px; margin-top: 8px; }
+  .search {
+    display: flex; justify-content: center; margin: 28px 0 20px;
+  }
+  .search input {
+    width: 100%; max-width: 460px; padding: 12px 18px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 15px;
+    outline: none; transition: border .2s;
+  }
+  .search input:focus { border-color: var(--accent); }
+  .count { color: var(--sub); font-size: 13px; text-align: center; margin-bottom: 16px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    display: flex; flex-direction: column; gap: 6px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 16px 14px;
+    text-decoration: none; color: var(--text);
+    transition: transform .15s, background .15s, border-color .15s;
+    position: relative;
+  }
+  .card:hover {
+    background: var(--card-hover); border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .card .name {
+    font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+  }
+  .card .name .go { color: var(--accent); font-size: 14px; opacity: 0; transition: opacity .15s; }
+  .card:hover .name .go { opacity: 1; }
+  .card .desc { font-size: 12.5px; color: var(--sub); line-height: 1.5; flex: 1; }
+  .card .meta { font-size: 11px; color: var(--sub); opacity: .75; }
+  .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 14px; }
+  footer { text-align: center; color: var(--sub); font-size: 12px; margin-top: 44px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  .tag {
+    display: inline-block; font-size: 10px; padding: 2px 8px;
+    background: rgba(34,193,163,.12); color: var(--accent);
+    border-radius: 20px; border: 1px solid rgba(34,193,163,.3);
+  }
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    header h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>洛雪TV 影视导航</h1>
+    <p>站点数据来自 luoxue-tv · resources.json</p>
+  </header>
+
+  <div class="search">
+    <input id="kw" type="search" placeholder="搜索站点名称或描述…" autocomplete="off">
+  </div>
+  <div class="count" id="count"></div>
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    数据版本 <span id="ver">-</span> · 由 <a href="https://github.com/Goodver/luoxue-tv" target="_blank" rel="noopener">luoxue-tv</a> 提供 · <a href="https://github.com/Goodver/luoxue-tv/blob/main/resources/resources.json" target="_blank" rel="noopener">resources.json</a>
+  </footer>
+</div>
+
+<script>
+const RAW = 'https://raw.githubusercontent.com/Goodver/luoxue-tv/main/resources/resources.json';
+const CACHE_KEY = 'luoxue-nav-cache';
+
+let items = [];
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function render(list) {
+  const grid = document.getElementById('grid');
+  const count = document.getElementById('count');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty">没有匹配的站点</div>';
+    count.textContent = '共 0 个站点';
+    return;
+  }
+  grid.innerHTML = list.map(it => `
+    <a class="card" href="${esc(it.url)}" target="_blank" rel="noopener">
+      <div class="name">${esc(it.name)} <span class="go">↗</span></div>
+      <div class="desc">${esc(it.desc || '')}</div>
+      <div class="meta">${it.tag ? '<span class="tag">' + esc(it.tag) + '</span>' : ''}</div>
+    </a>`).join('');
+  count.textContent = '共 ' + list.length + ' 个站点';
+}
+
+function applyFilter() {
+  const kw = document.getElementById('kw').value.trim().toLowerCase();
+  if (!kw) return render(items);
+  render(items.filter(it =>
+    (it.name || '').toLowerCase().includes(kw) ||
+    (it.desc || '').toLowerCase().includes(kw) ||
+    (it.tag || '').toLowerCase().includes(kw)
+  ));
+}
+
+async function load() {
+  const ver = document.getElementById('ver');
+  try {
+    // 先用缓存秒开，再后台刷新
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const obj = JSON.parse(cached);
+        items = obj.items || [];
+        ver.textContent = obj.version || '-';
+        applyFilter();
+      } catch (e) {}
+    }
+    const res = await fetch(RAW);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    items = data.items || [];
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    ver.textContent = data.version || '-';
+    applyFilter();
+  } catch (e) {
+    ver.textContent = '-';
+    if (!items.length) {
+      document.getElementById('grid').innerHTML =
+        '<div class="empty">加载失败：' + esc(e.message) + '<br>请检查网络后刷新重试</div>';
+    }
+  }
+}
+
+document.getElementById('kw').addEventListener('input', applyFilter);
+load();
+</script>
+</body>
+</html>
