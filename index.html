@@ -12,6 +12,7 @@
     --text: #e8eaf0;
     --sub: #8b93a7;
     --accent: #22c1a3;
+    --danger: #ff6b6b;
     --border: #262b3a;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,16 +23,22 @@
     min-height: 100vh;
   }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
-  header { text-align: center; padding: 40px 0 8px; }
+  header { text-align: center; padding: 40px 0 8px; position: relative; }
   header h1 {
     font-size: 30px; font-weight: 700; letter-spacing: 2px;
     background: linear-gradient(90deg, #22c1a3, #4fd1c5);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
   header p { color: var(--sub); font-size: 13px; margin-top: 8px; }
-  .search {
-    display: flex; justify-content: center; margin: 28px 0 20px;
+  .admin-btn {
+    position: absolute; top: 8px; right: 0;
+    background: var(--card); color: var(--sub);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+    transition: all .2s;
   }
+  .admin-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .search { display: flex; justify-content: center; margin: 28px 0 20px; }
   .search input {
     width: 100%; max-width: 460px; padding: 12px 18px;
     background: var(--card); border: 1px solid var(--border);
@@ -51,15 +58,12 @@
     border-radius: 12px; padding: 16px 16px 14px;
     text-decoration: none; color: var(--text);
     transition: transform .15s, background .15s, border-color .15s;
-    position: relative;
   }
   .card:hover {
     background: var(--card-hover); border-color: var(--accent);
     transform: translateY(-2px);
   }
-  .card .name {
-    font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px;
-  }
+  .card .name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
   .card .name .go { color: var(--accent); font-size: 14px; opacity: 0; transition: opacity .15s; }
   .card:hover .name .go { opacity: 1; }
   .card .desc { font-size: 12.5px; color: var(--sub); line-height: 1.5; flex: 1; }
@@ -72,15 +76,82 @@
     background: rgba(34,193,163,.12); color: var(--accent);
     border-radius: 20px; border: 1px solid rgba(34,193,163,.3);
   }
+
+  /* ===== 管理面板 ===== */
+  .admin-panel {
+    display: none;
+    margin: 24px auto 0;
+    max-width: 860px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .admin-panel.open { display: block; }
+  .admin-panel h2 { font-size: 17px; margin-bottom: 6px; color: var(--accent); }
+  .admin-panel .hint { font-size: 12px; color: var(--sub); line-height: 1.7; margin-bottom: 14px; }
+  .admin-panel .hint code {
+    background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 4px;
+    color: var(--accent); font-size: 11px;
+  }
+  .pat-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .pat-row input {
+    flex: 1; padding: 10px 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px;
+    outline: none;
+  }
+  .pat-row input:focus { border-color: var(--accent); }
+  button {
+    background: var(--accent); color: #06241c;
+    border: none; border-radius: 8px; padding: 10px 18px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: filter .15s;
+  }
+  button:hover { filter: brightness(1.12); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--sub); border: 1px solid var(--border); }
+  button.ghost:hover { color: var(--accent); border-color: var(--accent); filter: none; }
+  .adm-list { margin: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+  .adm-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1.5fr 44px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .adm-row input {
+    width: 100%; padding: 8px 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px;
+    outline: none;
+  }
+  .adm-row input:focus { border-color: var(--accent); }
+  .adm-row .del {
+    width: 44px; height: 36px; font-size: 16px; padding: 0;
+    background: transparent; color: var(--danger);
+    border: 1px solid rgba(255,107,107,.4); border-radius: 6px;
+    cursor: pointer;
+  }
+  .adm-row .del:hover { background: rgba(255,107,107,.12); }
+  .adm-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .adm-msg { margin-top: 12px; font-size: 13px; line-height: 1.6; min-height: 20px; }
+  .adm-msg.ok { color: var(--accent); }
+  .adm-msg.err { color: var(--danger); }
   @media (max-width: 560px) {
     .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     header h1 { font-size: 24px; }
+    .adm-row { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <button class="admin-btn" id="adminBtn" title="管理站点">⚙ 管理</button>
     <h1>洛雪TV 影视导航</h1>
     <p>站点数据来自 luoxue-tv · resources.json</p>
   </header>
@@ -91,6 +162,26 @@
   <div class="count" id="count"></div>
   <div class="grid" id="grid"></div>
 
+  <!-- 管理面板 -->
+  <div class="admin-panel" id="adminPanel">
+    <h2>站点管理</h2>
+    <div class="hint">
+      编辑结果会直接写入 <code>Goodver/luoxue-tv</code> 仓库的 <code>resources/resources.json</code>（电视端 App 拉取的站点数据源）。
+      需要 GitHub PAT（仓库写权限，建议使用只授权 luoxue-tv 仓库的 Fine-grained token，权限勾选 Contents: Read and write），仅保存在本浏览器。
+    </div>
+    <div class="pat-row">
+      <input type="password" id="pat" placeholder="GitHub PAT" autocomplete="off">
+      <button id="loadAdmin" class="ghost">读取站点</button>
+    </div>
+    <div class="adm-list" id="admList"></div>
+    <div class="adm-actions">
+      <button id="addRow">＋ 添加站点</button>
+      <button id="saveAll">保存到 GitHub</button>
+      <button id="closeAdmin" class="ghost">关闭</button>
+    </div>
+    <div class="adm-msg" id="admMsg"></div>
+  </div>
+
   <footer>
     数据版本 <span id="ver">-</span> · 由 <a href="https://github.com/Goodver/luoxue-tv" target="_blank" rel="noopener">luoxue-tv</a> 提供 · <a href="https://github.com/Goodver/luoxue-tv/blob/main/resources/resources.json" target="_blank" rel="noopener">resources.json</a>
   </footer>
@@ -98,14 +189,26 @@
 
 <script>
 const RAW = 'https://raw.githubusercontent.com/Goodver/luoxue-tv/main/resources/resources.json';
+const API = 'https://api.github.com/repos/Goodver/luoxue-tv/contents/resources/resources.json';
 const CACHE_KEY = 'luoxue-nav-cache';
+const PAT_KEY = 'luoxue-nav-pat';
 
 let items = [];
+let editing = [];
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+function uid() { return 'r' + Math.random().toString(36).slice(2, 8); }
+function today() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function b64utf8(s) {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+}
 
+/* ===== 浏览模式 ===== */
 function render(list) {
   const grid = document.getElementById('grid');
   const count = document.getElementById('count');
@@ -133,19 +236,18 @@ function applyFilter() {
   ));
 }
 
-async function load() {
+async function loadRemote() {
   const ver = document.getElementById('ver');
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      const obj = JSON.parse(cached);
+      items = obj.items || [];
+      ver.textContent = obj.version || '-';
+      applyFilter();
+    } catch (e) {}
+  }
   try {
-    // 先用缓存秒开，再后台刷新
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const obj = JSON.parse(cached);
-        items = obj.items || [];
-        ver.textContent = obj.version || '-';
-        applyFilter();
-      } catch (e) {}
-    }
     const res = await fetch(RAW);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -162,8 +264,107 @@ async function load() {
   }
 }
 
+/* ===== 管理模式 ===== */
+const adminPanel = document.getElementById('adminPanel');
+const admMsg = document.getElementById('admMsg');
+
+function msg(text, ok) {
+  admMsg.textContent = text;
+  admMsg.className = 'adm-msg ' + (ok ? 'ok' : 'err');
+}
+
+function renderAdmin() {
+  const list = document.getElementById('admList');
+  list.innerHTML = editing.map(r => `
+    <div class="adm-row">
+      <input data-f="name" value="${esc(r.name)}" placeholder="站点名称">
+      <input data-f="url" value="${esc(r.url)}" placeholder="https://…">
+      <input data-f="desc" value="${esc(r.desc)}" placeholder="描述（可选）">
+      <button class="del" data-del="${r.id}" title="删除">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editing = editing.filter(r => r.id !== btn.dataset.del);
+      renderAdmin();
+    });
+  });
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const row = editing.find(r => r.id === inp.closest('.adm-row').querySelector('.del').dataset.del);
+      if (row) row[inp.dataset.f] = inp.value;
+    });
+  });
+}
+
+document.getElementById('adminBtn').addEventListener('click', () => {
+  adminPanel.classList.toggle('open');
+  if (adminPanel.classList.contains('open')) {
+    document.getElementById('pat').value = localStorage.getItem(PAT_KEY) || '';
+    const cached = localStorage.getItem(CACHE_KEY);
+    try {
+      const src = cached ? JSON.parse(cached).items : items;
+      editing = (src || []).map(r => Object.assign({ id: uid() }, r));
+    } catch (e) { editing = items.map(r => Object.assign({ id: uid() }, r)); }
+    renderAdmin();
+  }
+});
+document.getElementById('closeAdmin').addEventListener('click', () => adminPanel.classList.remove('open'));
+document.getElementById('addRow').addEventListener('click', () => {
+  editing.push({ id: uid(), name: '', url: '', desc: '', cat: 'online_video', tag: '在线影视' });
+  renderAdmin();
+});
+
+document.getElementById('loadAdmin').addEventListener('click', async () => {
+  const pat = document.getElementById('pat').value.trim();
+  if (!pat) return msg('请先输入 GitHub PAT');
+  msg('读取中…');
+  try {
+    const res = await fetch(API, { headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 404 ? '（仓库/文件不存在或 PAT 无权限）' : ''));
+    const meta = await res.json();
+    const text = new TextDecoder().decode(Uint8Array.from(atob(meta.content), c => c.charCodeAt(0)));
+    const data = JSON.parse(text);
+    editing = (data.items || []).map(r => Object.assign({ id: uid() }, r));
+    localStorage.setItem(PAT_KEY, pat);
+    renderAdmin();
+    msg('已从 GitHub 读取 ' + editing.length + ' 个站点', true);
+  } catch (e) {
+    msg('读取失败：' + e.message);
+  }
+});
+
+document.getElementById('saveAll').addEventListener('click', async () => {
+  const pat = document.getElementById('pat').value.trim();
+  if (!pat) return msg('请先输入 GitHub PAT');
+  const rows = editing.filter(r => (r.name || '').trim() && (r.url || '').trim());
+  if (!rows.length) return msg('没有有效的站点（名称和 URL 必填）');
+  msg('保存中…');
+  try {
+    const getRes = await fetch(API, { headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json' } });
+    if (!getRes.ok) throw new Error('读取文件失败 HTTP ' + getRes.status);
+    const meta = await getRes.json();
+    const payload = {
+      version: today(),
+      items: rows.map(r => ({ name: r.name.trim(), url: r.url.trim(), desc: (r.desc || '').trim(), cat: r.cat || 'online_video', tag: r.tag || '在线影视' }))
+    };
+    const putRes = await fetch(API, {
+      method: 'PUT',
+      headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'update resources (' + today() + ')', content: b64utf8(JSON.stringify(payload, null, 1)), sha: meta.sha })
+    });
+    if (!putRes.ok) throw new Error('保存失败 HTTP ' + putRes.status);
+    localStorage.setItem(PAT_KEY, pat);
+    localStorage.removeItem(CACHE_KEY);
+    msg('已保存 ' + rows.length + ' 个站点到 GitHub ✓（App 端下次拉取生效，raw CDN 缓存约 1-5 分钟）', true);
+    items = rows;
+    applyFilter();
+  } catch (e) {
+    msg('保存失败：' + e.message);
+  }
+});
+
 document.getElementById('kw').addEventListener('input', applyFilter);
-load();
+loadRemote();
 </script>
 </body>
 </html>
