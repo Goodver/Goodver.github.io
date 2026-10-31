@@ -30,14 +30,18 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
   header p { color: var(--sub); font-size: 13px; margin-top: 8px; }
-  .admin-btn {
+  .top-actions {
     position: absolute; top: 8px; right: 0;
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+  }
+  .admin-btn {
     background: var(--card); color: var(--sub);
     border: 1px solid var(--border); border-radius: 8px;
     padding: 6px 14px; font-size: 13px; cursor: pointer;
     transition: all .2s;
   }
   .admin-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .admin-btn.busy { color: var(--accent); border-color: var(--accent); opacity: .75; cursor: progress; }
   .search { display: flex; justify-content: center; margin: 28px 0 20px; }
   .search input {
     width: 100%; max-width: 460px; padding: 12px 18px;
@@ -67,7 +71,10 @@
   .card .name .go { color: var(--accent); font-size: 14px; opacity: 0; transition: opacity .15s; }
   .card:hover .name .go { opacity: 1; }
   .card .desc { font-size: 12.5px; color: var(--sub); line-height: 1.5; flex: 1; }
-  .card .meta { font-size: 11px; color: var(--sub); opacity: .75; }
+  .card .meta {
+    font-size: 11px; color: var(--sub);
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
   .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 14px; }
   footer { text-align: center; color: var(--sub); font-size: 12px; margin-top: 44px; }
   footer a { color: var(--accent); text-decoration: none; }
@@ -141,9 +148,50 @@
   .adm-msg { margin-top: 12px; font-size: 13px; line-height: 1.6; min-height: 20px; }
   .adm-msg.ok { color: var(--accent); }
   .adm-msg.err { color: var(--danger); }
+  /* ===== 可用性检测 ===== */
+  .check-sum {
+    text-align: center; font-size: 12px; color: var(--sub);
+    margin-bottom: 16px; min-height: 17px; line-height: 1.6;
+  }
+  .check-sum b { color: var(--text); font-weight: 600; }
+  .status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .status .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--sub); display: inline-block;
+  }
+  .status.running { color: var(--sub); border-color: var(--border); }
+  .status.running .dot { animation: pulse 1s ease-in-out infinite; }
+  .status.ok { color: var(--accent); border-color: rgba(34,193,163,.35); background: rgba(34,193,163,.1); }
+  .status.ok .dot { background: var(--accent); }
+  .status.warn { color: #e6b450; border-color: rgba(230,180,80,.35); background: rgba(230,180,80,.1); }
+  .status.warn .dot { background: #e6b450; }
+  .status.bad { color: var(--danger); border-color: rgba(255,107,107,.35); background: rgba(255,107,107,.1); }
+  .status.bad .dot { background: var(--danger); }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .2 } }
+
+  /* ===== 拉取数据源 ===== */
+  .src-box {
+    border: 1px dashed var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .src-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .src-row .src-name { font-size: 13px; color: var(--text); font-weight: 600; }
+  .src-box .hint { margin-bottom: 0; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--sub); cursor: pointer;
+  }
+  .chk input { accent-color: var(--accent); }
+
   @media (max-width: 560px) {
     .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     header h1 { font-size: 24px; }
+    .top-actions { position: static; justify-content: center; margin-bottom: 6px; }
     .adm-row { grid-template-columns: 1fr 1fr; }
   }
 </style>
@@ -151,7 +199,11 @@
 <body>
 <div class="wrap">
   <header>
-    <button class="admin-btn" id="adminBtn" title="管理站点">⚙ 管理</button>
+    <div class="top-actions">
+      <button class="admin-btn" id="checkBtn" title="逐个探测站点是否可访问">◎ 检测可用性</button>
+      <button class="admin-btn" id="pullBtn" title="拉取 awesome-zhuiju-free 的 online_video 并覆盖 resources.json">⇩ 拉取数据源</button>
+      <button class="admin-btn" id="adminBtn" title="管理站点">⚙ 管理</button>
+    </div>
     <h1>洛雪TV 影视导航</h1>
     <p>站点数据来自 luoxue-tv · resources.json</p>
   </header>
@@ -160,6 +212,7 @@
     <input id="kw" type="search" placeholder="搜索站点名称或描述…" autocomplete="off">
   </div>
   <div class="count" id="count"></div>
+  <div class="check-sum" id="checkSum"></div>
   <div class="grid" id="grid"></div>
 
   <!-- 管理面板 -->
@@ -172,6 +225,19 @@
     <div class="pat-row">
       <input type="password" id="pat" placeholder="GitHub PAT" autocomplete="off">
       <button id="loadAdmin" class="ghost">读取站点</button>
+    </div>
+
+    <div class="src-box">
+      <div class="src-row">
+        <span class="src-name">⇩ 拉取 online_video</span>
+        <button id="pullBtn2">拉取并覆盖</button>
+        <label class="chk"><input type="checkbox" id="alsoLuoxue"> 同时写入页面展示源 luoxue-tv</label>
+      </div>
+      <div class="hint">
+        从 <code>laoma528/awesome-zhuiju-free</code> 的 <code>resources/resources.json</code> 读取 <code>online_video</code> 分类，
+        去重后整体覆盖 <code>Goodver/Goodver.github.io</code> 的 <code>resources.json</code>（Goodver.github.io 仓库根目录，电视端 fallback 源）。
+        需要该仓库 Contents: Read and write 权限的 PAT；勾选右侧「同时写入页面展示源」时会再写入一次 <code>luoxue-tv</code>。
+      </div>
     </div>
     <div class="adm-list" id="admList"></div>
     <div class="adm-actions">
@@ -193,8 +259,16 @@ const API = 'https://api.github.com/repos/Goodver/luoxue-tv/contents/resources/r
 const CACHE_KEY = 'luoxue-nav-cache';
 const PAT_KEY = 'luoxue-nav-pat';
 
+/* 拉取源：awesome-zhuiju-free 的 online_video */
+const SRC_RAW = 'https://raw.githubusercontent.com/laoma528/awesome-zhuiju-free/main/resources/resources.json';
+/* 覆盖目标：本仓库（Goodver.github.io）根目录 resources.json */
+const DEST_API = 'https://api.github.com/repos/Goodver/Goodver.github.io/contents/resources.json';
+
 let items = [];
 let editing = [];
+const statusMap = new Map();   // url -> { state: 'running'|'ok'|'warn'|'timeout'|'bad', ms }
+const cardEls = new Map();     // url -> 卡片 DOM
+let checking = false;
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -205,25 +279,50 @@ function today() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function b64utf8(s) {
-  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  const CH = 0x8000;   // 分块，避免大 JSON 撑爆 String.fromCharCode 参数上限
+  for (let i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  }
+  return btoa(bin);
 }
 
 /* ===== 浏览模式 ===== */
+function badge(url) {
+  const st = statusMap.get(url);
+  if (!st) return '';
+  if (st.state === 'running') return '<span class="status running"><i class="dot"></i>检测中</span>';
+  if (st.state === 'ok') return '<span class="status ok" title="可访问' + (st.ms ? ' · ' + st.ms + 'ms' : '') + '"><i class="dot"></i>可用</span>';
+  if (st.state === 'warn') return '<span class="status warn" title="' + esc(st.tip || '无法确认') + '"><i class="dot"></i>' + esc(st.label || '待确认') + '</span>';
+  if (st.state === 'timeout') return '<span class="status warn" title="超时：可能被墙或响应过慢"><i class="dot"></i>超时</span>';
+  return '<span class="status bad" title="无法连接：域名失效或被拦截"><i class="dot"></i>不可用</span>';
+}
+
 function render(list) {
   const grid = document.getElementById('grid');
   const count = document.getElementById('count');
+  cardEls.clear();
   if (!list.length) {
     grid.innerHTML = '<div class="empty">没有匹配的站点</div>';
     count.textContent = '共 0 个站点';
     return;
   }
   grid.innerHTML = list.map(it => `
-    <a class="card" href="${esc(it.url)}" target="_blank" rel="noopener">
+    <a class="card" data-url="${esc(it.url)}" href="${esc(it.url)}" target="_blank" rel="noopener">
       <div class="name">${esc(it.name)} <span class="go">↗</span></div>
       <div class="desc">${esc(it.desc || '')}</div>
-      <div class="meta">${it.tag ? '<span class="tag">' + esc(it.tag) + '</span>' : ''}</div>
+      <div class="meta"><span class="badge">${badge(it.url)}</span>${it.tag ? '<span class="tag">' + esc(it.tag) + '</span>' : ''}</div>
     </a>`).join('');
+  grid.querySelectorAll('.card').forEach(el => cardEls.set(el.dataset.url, el));
   count.textContent = '共 ' + list.length + ' 个站点';
+}
+
+function paint(url) {
+  const el = cardEls.get(url);
+  if (!el) return;
+  const b = el.querySelector('.badge');
+  if (b) b.innerHTML = badge(url);
 }
 
 function applyFilter() {
@@ -264,6 +363,217 @@ async function loadRemote() {
   }
 }
 
+/* ===== 站点可用性检测 ===== */
+const TIMEOUT_MS = 10000;
+const CONCURRENCY = 6;
+
+function probe(url) {
+  return new Promise(resolve => {
+    // https 页面无法探测 http 站点（混合内容），直接标注
+    if (location.protocol === 'https:' && /^http:\/\//i.test(url)) {
+      return resolve({ state: 'warn', label: '未检测', tip: 'http 站点，与本页 https 混合内容冲突，浏览器禁止探测' });
+    }
+    const ctrl = new AbortController();
+    const t0 = performance.now();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    const done = r => { clearTimeout(timer); resolve(r); };
+    fetch(url, {
+      mode: 'no-cors',        // 只看“请求是否成功完成”，不需要读响应
+      redirect: 'follow',
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: ctrl.signal
+    }).then(() => {
+      done({ state: 'ok', ms: Math.round(performance.now() - t0) });
+    }).catch(err => {
+      const ms = Math.round(performance.now() - t0);
+      if (err && err.name === 'AbortError') done({ state: 'timeout', ms });
+      else done({ state: 'bad', ms });
+    });
+  });
+}
+
+function renderSummary(done, total) {
+  const el = document.getElementById('checkSum');
+  let ok = 0, warn = 0, bad = 0;
+  statusMap.forEach(s => {
+    if (s.state === 'ok') ok++;
+    else if (s.state === 'timeout' || s.state === 'warn') warn++;
+    else if (s.state === 'bad') bad++;
+  });
+  if (done < total) {
+    el.innerHTML = '检测中 <b>' + done + '/' + total + '</b> · 可用 <b>' + ok + '</b> · 超时/受限 <b>' + warn + '</b> · 不可用 <b>' + bad + '</b>';
+  } else {
+    el.innerHTML = '检测完成，共 <b>' + total + '</b> 个站点 · ' +
+      '<span style="color:var(--accent)">可用 ' + ok + '</span> · ' +
+      '<span style="color:#e6b450">超时/受限 ' + warn + '</span> · ' +
+      '<span style="color:var(--danger)">不可用 ' + bad + '</span>' +
+      '（浏览器侧探测，仅代表当前网络环境下首页可达）';
+  }
+}
+
+async function checkAll() {
+  if (checking) return;
+  const list = items.slice();
+  if (!list.length) return;
+  const btn = document.getElementById('checkBtn');
+  checking = true;
+  btn.disabled = true;
+  btn.classList.add('busy');
+  btn.textContent = '◎ 检测中…';
+  statusMap.clear();
+  cardEls.forEach((el, url) => { const b = el.querySelector('.badge'); if (b) b.innerHTML = ''; });
+
+  const queue = list.map(it => it.url);
+  const total = queue.length;
+  let done = 0;
+  renderSummary(0, total);
+
+  const worker = async () => {
+    while (queue.length) {
+      const url = queue.shift();
+      statusMap.set(url, { state: 'running' });
+      paint(url);
+      const r = await probe(url);
+      statusMap.set(url, r);
+      paint(url);
+      done++;
+      renderSummary(done, total);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
+
+  checking = false;
+  btn.disabled = false;
+  btn.classList.remove('busy');
+  btn.textContent = '◎ 重新检测';
+}
+
+document.getElementById('checkBtn').addEventListener('click', checkAll);
+
+/* ===== 拉取 awesome-zhuiju-free 的 online_video ===== */
+function ghHeaders(pat) {
+  return { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json' };
+}
+
+async function ghRead(api, pat) {
+  const res = await fetch(api, { headers: ghHeaders(pat), cache: 'no-store' });
+  if (!res.ok) throw new Error('读取 HTTP ' + res.status + (res.status === 404 ? '（文件不存在或 PAT 无该仓库权限）' : ''));
+  return res.json();
+}
+
+async function ghWrite(api, pat, obj, message) {
+  const meta = await ghRead(api, pat);           // 先取最新 sha，避免 409
+  const body = {
+    message: message,
+    content: b64utf8(JSON.stringify(obj, null, 1)),
+    sha: meta.sha
+  };
+  const res = await fetch(api, {
+    method: 'PUT',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, ghHeaders(pat)),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.text()).slice(0, 140); } catch (e) {}
+    throw new Error('写入 HTTP ' + res.status + (res.status === 403 || res.status === 404 ? '（PAT 缺少该仓库 Contents 写权限）' : '') + (detail ? ' ' + detail : ''));
+  }
+  return res.json();
+}
+
+function pickOnlineVideo(src) {
+  const all = Array.isArray(src) ? src : (src.resources || src.items || []);
+  const out = [];
+  const seen = new Set();
+  all.forEach(r => {
+    const cat = r.category || r.cat || '';
+    if (cat !== 'online_video') return;
+    const url = String(r.url || '').trim();
+    if (!url) return;
+    const key = url.replace(/\/+$/, '').toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    const tag = (Array.isArray(r.tags) && r.tags.length) ? r.tags[0] : (r.tag || '在线影视');
+    out.push({
+      name: String(r.name || '').trim(),
+      url: url,
+      desc: String(r.summary_short || r.summary || r.desc || '').trim(),
+      cat: 'online_video',
+      tag: tag
+    });
+  });
+  return out;
+}
+
+let pulling = false;
+async function pullOnlineVideo() {
+  if (pulling) return;
+  const pat = (document.getElementById('pat').value || '').trim() || localStorage.getItem(PAT_KEY) || '';
+  if (!pat) {
+    openPanel();
+    document.getElementById('pat').focus();
+    return msg('请先填入 GitHub PAT（需 Goodver.github.io 仓库 Contents: Read and write），再点「⇩ 拉取数据源」');
+  }
+  pulling = true;
+  const b1 = document.getElementById('pullBtn'), b2 = document.getElementById('pullBtn2');
+  b1.disabled = b2.disabled = true;
+  b1.classList.add('busy');
+  const oldLabel = b1.textContent;
+  b1.textContent = '⇩ 拉取中…';
+  try {
+    msg('正在拉取源数据…');
+    const srcRes = await fetch(SRC_RAW + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!srcRes.ok) throw new Error('源仓库 HTTP ' + srcRes.status);
+    const src = await srcRes.json();
+    const picked = pickOnlineVideo(src);
+    if (!picked.length) throw new Error('源数据中没有 online_video 条目');
+
+    if (!confirm('将从 laoma528/awesome-zhuiju-free 拉取 ' + picked.length + ' 个 online_video 站点，并整体覆盖\nGoodver/Goodver.github.io → resources.json\n\n该操作会替换该文件现有内容，确定继续？')) {
+      msg('已取消（未写入）');
+      return;
+    }
+
+    msg('源数据 ' + picked.length + ' 条，正在写入 Goodver.github.io …');
+    const payload = { version: today(), items: picked };
+    await ghWrite(DEST_API, pat, payload, 'pull online_video from awesome-zhuiju-free (' + today() + ')');
+    localStorage.setItem(PAT_KEY, pat);
+
+    let extra = '';
+    if (document.getElementById('alsoLuoxue').checked) {
+      try {
+        await ghWrite(API, pat, payload, 'sync online_video from Goodver.github.io (' + today() + ')');
+        localStorage.removeItem(CACHE_KEY);
+        items = picked;
+        statusMap.clear();
+        document.getElementById('ver').textContent = payload.version;
+        applyFilter();
+        document.getElementById('checkSum').textContent = '';
+        extra = '；已同步 luoxue-tv（页面展示已刷新）';
+      } catch (e2) {
+        extra = '；但同步 luoxue-tv 失败：' + e2.message;
+      }
+    }
+
+    msg('已覆盖 Goodver.github.io/resources.json：' + picked.length + ' 个 online_video 站点 ✓（raw CDN 缓存约 1-5 分钟）' + extra, true);
+    if (adminPanel.classList.contains('open')) {
+      editing = picked.map(r => Object.assign({ id: uid() }, r));
+      renderAdmin();
+    }
+  } catch (e) {
+    msg('拉取失败：' + e.message);
+  } finally {
+    pulling = false;
+    b1.disabled = b2.disabled = false;
+    b1.classList.remove('busy');
+    b1.textContent = oldLabel;
+  }
+}
+
+document.getElementById('pullBtn').addEventListener('click', pullOnlineVideo);
+document.getElementById('pullBtn2').addEventListener('click', pullOnlineVideo);
+
 /* ===== 管理模式 ===== */
 const adminPanel = document.getElementById('adminPanel');
 const admMsg = document.getElementById('admMsg');
@@ -296,16 +606,23 @@ function renderAdmin() {
   });
 }
 
+function openPanel() {
+  adminPanel.classList.add('open');
+  document.getElementById('pat').value = localStorage.getItem(PAT_KEY) || '';
+  const cached = localStorage.getItem(CACHE_KEY);
+  try {
+    const src = cached ? JSON.parse(cached).items : items;
+    editing = (src || []).map(r => Object.assign({ id: uid() }, r));
+  } catch (e) { editing = items.map(r => Object.assign({ id: uid() }, r)); }
+  renderAdmin();
+  if (window.innerWidth > 560) adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 document.getElementById('adminBtn').addEventListener('click', () => {
-  adminPanel.classList.toggle('open');
   if (adminPanel.classList.contains('open')) {
-    document.getElementById('pat').value = localStorage.getItem(PAT_KEY) || '';
-    const cached = localStorage.getItem(CACHE_KEY);
-    try {
-      const src = cached ? JSON.parse(cached).items : items;
-      editing = (src || []).map(r => Object.assign({ id: uid() }, r));
-    } catch (e) { editing = items.map(r => Object.assign({ id: uid() }, r)); }
-    renderAdmin();
+    adminPanel.classList.remove('open');
+  } else {
+    openPanel();
   }
 });
 document.getElementById('closeAdmin').addEventListener('click', () => adminPanel.classList.remove('open'));
